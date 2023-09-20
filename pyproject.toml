@@ -7,7 +7,7 @@ name = "aitool"
 version = "0.0.1"
 authors = [{ name = "golangboy", email = "golangboy@qq.com" }]
 description = "just a AI tool!"
-readme = "README.md"
+readme = "README.MD"
 license = { file = "LICENSE" }
 requires-python = ">=3.6"
 classifiers = [
