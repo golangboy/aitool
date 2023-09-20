@@ -1,6 +1,6 @@
 [build-system]
-requires = ["golangboy"]
-build-backend = "golangboy.build"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "aitool"
