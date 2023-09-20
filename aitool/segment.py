@@ -6,7 +6,7 @@ import tqdm
 import os
 import albumentations
 from PIL import Image
-import metrics
+import aitool.metrics
 
 
 def Train(model: torch.nn.Module, data_dir: str, val_data_dir: str = "", batch_size: int = 1,
@@ -117,19 +117,19 @@ def Train(model: torch.nn.Module, data_dir: str, val_data_dir: str = "", batch_s
                     pred_src = cv2.resize(pred, (int(val_data.src_shape[index][1]), int(val_data.src_shape[index][0])),
                                           interpolation=cv2.INTER_LINEAR)
                     mask_np = val_data.mask(index).astype(np.uint8)
-                    hist += metrics.fast_hist(mask_np.flatten(),
+                    hist += aitool.metrics.fast_hist(mask_np.flatten(),
                                               pred_src.flatten(), out_channel)
 
                     img_src = val_data.image(index).astype(np.uint8)
 
-                    output = metrics.visual_mask(
+                    output = aitool.metrics.visual_mask(
                         pred_src, labels_name)
-                    pred = metrics.visual_mask(
+                    pred = aitool.metrics.visual_mask(
                         mask_np, labels_name)
                     result = np.concatenate((img_src, pred, output), axis=1)
                     cv2.imwrite(f'./{pred_dir}/{index}.png', result)
                     pass
-            r_miou = np.nanmean(metrics.per_class_iu(hist))
+            r_miou = np.nanmean(aitool.metrics.per_class_iu(hist))
         tbar.set_description(
             f'echo: {epoch} loss: {r_loss / len(train_loader):.4f}, miou: {r_miou:.4f}')
     pass
