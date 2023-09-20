@@ -15,7 +15,7 @@ classifiers = [
   "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
 ]
-dependencies = [""]
+dependencies = ["matplotlib>=3.5.1"]
 
 [project.urls]
 "Homepage" = "https://github.com/golangboy/aitool"
