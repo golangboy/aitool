@@ -1,0 +1,21 @@
+[build-system]
+requires = ["golangboy"]
+build-backend = "golangboy.build"
+
+[project]
+name = "aitool"
+version = "0.0.1"
+authors = [{ name = "golangboy", email = "golangboy@qq.com" }]
+description = "just a AI tool!"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.6"
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+]
+dependencies = [""]
+
+[project.urls]
+"Homepage" = "https://github.com/golangboy/aitool"
