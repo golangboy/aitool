@@ -1,4 +1,11 @@
 import numpy as np
+import torch
+
+
+"""
+b是预测
+hist[实际上的值][模型输出的值]
+"""
 
 
 def fast_hist(a: np.ndarray, b: np.ndarray, n: int):
@@ -8,6 +15,18 @@ def fast_hist(a: np.ndarray, b: np.ndarray, n: int):
 
 def per_class_iu(hist: np.ndarray):
     return np.diag(hist) / np.maximum((hist.sum(1) + hist.sum(0) - np.diag(hist)), 1)
+
+
+def per_class_PA_Recall(hist):
+    return np.diag(hist) / np.maximum(hist.sum(1), 1)
+
+
+def per_class_Precision(hist):
+    return np.diag(hist) / np.maximum(hist.sum(0), 1)
+
+
+def per_Accuracy(hist):
+    return np.sum(np.diag(hist)) / np.maximum(np.sum(hist), 1)
 
 
 def visual_mask(img_np: np.ndarray, labels_name: list):

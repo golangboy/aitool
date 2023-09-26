@@ -6,7 +6,8 @@ import tqdm
 import os
 import albumentations
 from PIL import Image
-import aitool.metrics
+import metrics
+from sklearn.metrics import precision_score, recall_score, confusion_matrix
 
 
 def Train(model: torch.nn.Module, data_dir: str, val_data_dir: str = "", batch_size: int = 1,
@@ -28,6 +29,7 @@ def Train(model: torch.nn.Module, data_dir: str, val_data_dir: str = "", batch_s
         masks
             0.png
     """
+    beta = 1
 
     class ds(torch.utils.data.Dataset):
         def __init__(self, data_dir: str, transform=None, out_channal=21):
@@ -38,7 +40,7 @@ def Train(model: torch.nn.Module, data_dir: str, val_data_dir: str = "", batch_s
             self.images.sort()
             self.masks.sort()
             self.len = len(self.images)
-            self.src_shape = [0] * self.len
+            self.src_shape = [0]*self.len
             self.transform = transform
             self.out_channal = out_channal
             assert self.len == len(self.masks)
@@ -81,7 +83,7 @@ def Train(model: torch.nn.Module, data_dir: str, val_data_dir: str = "", batch_s
     if len(val_data_dir) > 0:
         val_data = ds(val_data_dir, transform=val_transform)
         val_loader = torch.utils.data.DataLoader(
-            val_data, batch_size=batch_size, shuffle=False, num_workers=0)
+            val_data, batch_size=1, shuffle=False, num_workers=0)
 
     loss_func = torch.nn.CrossEntropyLoss(ignore_index=255)
     optimizer = torch.optim.Adam(model.parameters(), lr=learn_rate)
@@ -109,32 +111,32 @@ def Train(model: torch.nn.Module, data_dir: str, val_data_dir: str = "", batch_s
             model.eval()
             hist = np.zeros((out_channel, out_channel))
             with torch.no_grad():
-                pred_list = []
                 for index, data in enumerate(val_loader):
                     image_torch, mask_torch = data
                     output = model(image_torch.to(dev))
-                    pred_list.append(output)
-                pred_list = torch.cat(pred_list, dim=0)
-                for index, output in enumerate(pred_list):
-                    output = output.unsqueeze(0)
                     pred = output.argmax(dim=1).detach().cpu().numpy()[0]
                     pred = pred.astype(np.uint8)
                     pred_src = cv2.resize(pred, (int(val_data.src_shape[index][1]), int(val_data.src_shape[index][0])),
                                           interpolation=cv2.INTER_LINEAR)
                     mask_np = val_data.mask(index).astype(np.uint8)
-                    hist += aitool.metrics.fast_hist(mask_np.flatten(),
-                                                     pred_src.flatten(), out_channel)
-                    if (epoch) % 10 == 0:
-                        img_src = val_data.image(index).astype(np.uint8)
+                    hist += metrics.fast_hist(mask_np.flatten(),
+                                              pred_src.flatten(), out_channel)
 
-                        output = aitool.metrics.visual_mask(
-                            pred_src, labels_name)
-                        pred = aitool.metrics.visual_mask(
-                            mask_np, labels_name)
-                        result = np.concatenate((img_src, pred, output), axis=1)
-                        cv2.imwrite(f'./{pred_dir}/{index}.png', result)
+                    img_src = val_data.image(index).astype(np.uint8)
+
+                    output = metrics.visual_mask(
+                        pred_src, labels_name)
+                    pred = metrics.visual_mask(
+                        mask_np, labels_name)
+                    result = np.concatenate((img_src, pred, output), axis=1)
+                    cv2.imwrite(f'./{pred_dir}/{index}.png', result)
                     pass
-            r_miou = np.nanmean(aitool.metrics.per_class_iu(hist))
+            r_miou = np.nanmean(metrics.per_class_iu(hist))
+            r_recall = np.nanmean(metrics.per_class_PA_Recall(hist))
+            r_precision = np.nanmean(metrics.per_class_Precision(hist))
+            r_accuracy = metrics.per_Accuracy(hist)
+            f_score = (1+beta**2)*r_precision*r_recall / \
+                (beta**2*r_precision+r_recall)
         tbar.set_description(
-            f'echo: {epoch} loss: {r_loss / len(train_loader):.4f}, miou: {r_miou:.4f}')
+            f'echo: {epoch} loss: {r_loss / len(train_loader):.4f}, miou: {r_miou:.4f}, recall: {r_recall:.4f}, accuracy: {r_accuracy:.4f}, precision: {r_precision:.4f}, f1_score: {f_score:.4f}')
     pass
