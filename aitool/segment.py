@@ -19,7 +19,8 @@ def Train(model: torch.nn.Module, data_dir: str, val_data_dir: str = "", batch_s
           num_workers=0,
           labels_name=None,
           pred_dir="./result",
-          project_name="segment"
+          project_name="segment",
+          eval_interval=1
           ):
     r"""
     This function will convert the input image to RGB (channel=3)
@@ -108,7 +109,7 @@ def Train(model: torch.nn.Module, data_dir: str, val_data_dir: str = "", batch_s
             pass
         lr_scheduler.step()
         r_miou = 0
-        if epoch % 5 > 0:
+        if epoch % eval_interval > 0:
             continue
         if len(val_data_dir) > 0:
             model.eval()
