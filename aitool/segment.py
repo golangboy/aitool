@@ -6,7 +6,7 @@ import tqdm
 import os
 import albumentations
 from PIL import Image
-import metrics
+import aitool.metrics
 from sklearn.metrics import precision_score, recall_score, confusion_matrix
 
 
