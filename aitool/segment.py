@@ -8,7 +8,7 @@ import albumentations
 from PIL import Image
 import aitool.metrics as metrics
 from sklearn.metrics import precision_score, recall_score, confusion_matrix
-
+import wandb
 
 def Train(model: torch.nn.Module, data_dir: str, val_data_dir: str = "", batch_size: int = 1,
           epochs=100,
@@ -18,7 +18,8 @@ def Train(model: torch.nn.Module, data_dir: str, val_data_dir: str = "", batch_s
           learn_rate=0.0001,
           num_workers=0,
           labels_name=None,
-          pred_dir="./result"
+          pred_dir="./result",
+          project_name="segment"
           ):
     r"""
     This function will convert the input image to RGB (channel=3)
@@ -30,7 +31,9 @@ def Train(model: torch.nn.Module, data_dir: str, val_data_dir: str = "", batch_s
             0.png
     """
     beta = 1
-
+    run = wandb.init(project=project_name)
+    config = wandb.config
+    config.learning_rate = learn_rate
     class ds(torch.utils.data.Dataset):
         def __init__(self, data_dir: str, transform=None, out_channal=21):
             self.images = [os.path.join(data_dir, 'images', i) for i in os.listdir(
@@ -139,4 +142,11 @@ def Train(model: torch.nn.Module, data_dir: str, val_data_dir: str = "", batch_s
                 (beta**2*r_precision+r_recall)
         tbar.set_description(
             f'echo: {epoch} loss: {r_loss / len(train_loader):.4f}, miou: {r_miou:.4f}, recall: {r_recall:.4f}, accuracy: {r_accuracy:.4f}, precision: {r_precision:.4f}, f1_score: {f_score:.4f}')
+        wandb.log({"loss": r_loss / len(train_loader),
+                     "miou": r_miou,
+                     "recall": r_recall,
+                     "accuracy": r_accuracy,
+                     "precision": r_precision,
+                     "f1_score": f_score})
+    run.finish()
     pass
