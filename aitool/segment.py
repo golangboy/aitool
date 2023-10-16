@@ -20,7 +20,8 @@ def Train(model: torch.nn.Module, data_dir: str, val_data_dir: str = "", batch_s
           labels_name=None,
           pred_dir="./result",
           project_name="segment",
-          eval_interval=1
+          eval_interval=1,
+          save_image=False
           ):
     r"""
     This function will convert the input image to RGB (channel=3)
@@ -125,15 +126,15 @@ def Train(model: torch.nn.Module, data_dir: str, val_data_dir: str = "", batch_s
                     mask_np = val_data.mask(index).astype(np.uint8)
                     hist += metrics.fast_hist(mask_np.flatten(),
                                               pred_src.flatten(), out_channel)
+                    if save_image:
+                        img_src = val_data.image(index).astype(np.uint8)
 
-                    img_src = val_data.image(index).astype(np.uint8)
-
-                    output = metrics.visual_mask(
-                        pred_src, labels_name)
-                    pred = metrics.visual_mask(
-                        mask_np, labels_name)
-                    result = np.concatenate((img_src, pred, output), axis=1)
-                    cv2.imwrite(f'./{pred_dir}/{index}.png', result)
+                        output = metrics.visual_mask(
+                            pred_src, labels_name)
+                        pred = metrics.visual_mask(
+                            mask_np, labels_name)
+                        result = np.concatenate((img_src, pred, output), axis=1)
+                        cv2.imwrite(f'./{pred_dir}/{index}.png', result)
                     pass
             r_miou = np.nanmean(metrics.per_class_iu(hist))
             r_recall = np.nanmean(metrics.per_class_PA_Recall(hist))
