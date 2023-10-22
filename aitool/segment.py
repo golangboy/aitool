@@ -10,6 +10,7 @@ import aitool.metrics as metrics
 from sklearn.metrics import precision_score, recall_score, confusion_matrix
 import wandb
 
+
 def Train(model: torch.nn.Module, data_dir: str, val_data_dir: str = "", batch_size: int = 1,
           epochs=100,
           out_channel=21,
@@ -36,6 +37,7 @@ def Train(model: torch.nn.Module, data_dir: str, val_data_dir: str = "", batch_s
     run = wandb.init(project=project_name)
     config = wandb.config
     config.learning_rate = learn_rate
+
     class ds(torch.utils.data.Dataset):
         def __init__(self, data_dir: str, transform=None, out_channal=21):
             self.images = [os.path.join(data_dir, 'images', i) for i in os.listdir(
@@ -45,7 +47,7 @@ def Train(model: torch.nn.Module, data_dir: str, val_data_dir: str = "", batch_s
             self.images.sort()
             self.masks.sort()
             self.len = len(self.images)
-            self.src_shape = [0]*self.len
+            self.src_shape = [0] * self.len
             self.transform = transform
             self.out_channal = out_channal
             assert self.len == len(self.masks)
@@ -79,6 +81,7 @@ def Train(model: torch.nn.Module, data_dir: str, val_data_dir: str = "", batch_s
 
         def __len__(self):
             return self.len
+
     os.makedirs(pred_dir, exist_ok=True)
     dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     train_data = ds(data_dir, transform=train_transform)
@@ -140,15 +143,40 @@ def Train(model: torch.nn.Module, data_dir: str, val_data_dir: str = "", batch_s
             r_recall = np.nanmean(metrics.per_class_PA_Recall(hist))
             r_precision = np.nanmean(metrics.per_class_Precision(hist))
             r_accuracy = metrics.per_Accuracy(hist)
-            f_score = (1+beta**2)*r_precision*r_recall / \
-                (beta**2*r_precision+r_recall)
+            f_score = (1 + beta ** 2) * r_precision * r_recall / \
+                      (beta ** 2 * r_precision + r_recall)
         tbar.set_description(
             f'echo: {epoch} loss: {r_loss / len(train_loader):.4f}, miou: {r_miou:.4f}, recall: {r_recall:.4f}, accuracy: {r_accuracy:.4f}, precision: {r_precision:.4f}, f1_score: {f_score:.4f}')
         wandb.log({"loss": r_loss / len(train_loader),
-                     "miou": r_miou,
-                     "recall": r_recall,
-                     "accuracy": r_accuracy,
-                     "precision": r_precision,
-                     "f1_score": f_score})
+                   "miou": r_miou,
+                   "recall": r_recall,
+                   "accuracy": r_accuracy,
+                   "precision": r_precision,
+                   "f1_score": f_score})
+        torch.save(model.state_dict(), "model.pth")
     run.finish()
+    pass
+
+
+def Predict(model: torch.nn.Module, val_data_dir: str = "", result_dir: str = "rs", labels_name:list=None):
+    model.eval()
+    images_fs = os.listdir(val_data_dir)
+    os.makedirs(result_dir, exist_ok=True)
+    with torch.no_grad():
+        for index, image_f in enumerate(images_fs):
+            image = Image.open(os.path.join(val_data_dir, image_f)).convert("RGB")
+            image_rz=image.copy().resize((1024,1024))
+            image_np = np.array(image_rz)
+            image_torch = torch.from_numpy(image_np).float()
+            image_torch = image_torch.permute(2, 0, 1)
+            image_torch = image_torch.unsqueeze(0)
+            output = model(image_torch.cuda())
+            pred = output.argmax(dim=1).detach().cpu().numpy()[0]
+            pred = pred.astype(np.uint8)
+            pred_src = cv2.resize(pred, (int(image_np.shape[1]), int(image_np.shape[0])),
+                                  interpolation=cv2.INTER_LINEAR)
+            pred = metrics.visual_mask(pred_src, labels_name)
+            result = np.concatenate((image_np, pred), axis=1)
+            cv2.imwrite(f'./{result_dir}/{index}.png', result)
+            pass
     pass
